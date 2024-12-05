@@ -9,12 +9,14 @@ import {
   rollbackRecord,
   undoRecord
 } from "./core/record.ts";
+import Longpress from "./directives/long-press";
 
 enum RecordType {
   NORMAL = 'normal',
   WRONGS = 'wrongs'
 }
 
+const vLongpress = Longpress
 const mode = ref<RecordType>(RecordType.NORMAL)
 const project = computed(() => {
   return mode.value === RecordType.WRONGS ? '错题本练习，' : '题库练习，'
@@ -32,6 +34,10 @@ onMounted(() => {
   words.value.forEach(item => addRecord(item))
   current.value = getUndoStack().shift()
 })
+
+function showOptions() {
+  show.value = true
+}
 
 function prev() {
   if (getRollbackStack().isEmpty()) return
@@ -85,29 +91,11 @@ function setData(list: string[]) {
   words.value.forEach(item => addRecord(item))
   current.value = getUndoStack().shift()
 }
-
-const pressTimer = ref()
-
-function start() {
-  pressTimer.value = setTimeout(() => {
-    show.value = true
-  }, 1000)
-}
-
-function end() {
-  clearTimeout(pressTimer.value)
-  show.value = false
-}
 </script>
 
 <template>
   <div class="container">
-    <div class="main"
-         @click="next"
-         @mousedown="start"
-         @mouseup="end"
-         @touchstart="start"
-         @touchend="end">
+    <div class="main" @click="next" v-longpress="showOptions">
       {{ current }}
     </div>
     <div class="desc">{{ project }}剩余：{{ getUndoStack().size() }}</div>

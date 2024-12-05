@@ -1,0 +1,8 @@
+@font-face {
+    font-family: 'pinyin';
+    src: url("./fonts/pinyin.ttf")
+}
+
+:root {
+    touch-action: manipulation;
+}
