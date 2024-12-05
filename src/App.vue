@@ -26,6 +26,7 @@ const current = ref()
 const wrongs = ref()
 const words = ref(pyData)
 const show = ref(false)
+const showCompletionModal = ref(false)
 
 const isWrongs = computed(() => mode.value === RecordType.WRONGS)
 const hasWrongs = computed(() => wrongs.value.length > 0)
@@ -46,7 +47,7 @@ function prev() {
 
 function next() {
   if (getUndoStack().isEmpty()) {
-    alert('恭喜你 练完了，刷新重来！')
+    showCompletionModal.value = true
     return
   }
   current.value = undoRecord(current.value)
@@ -91,84 +92,73 @@ function setData(list: string[]) {
   words.value.forEach(item => addRecord(item))
   current.value = getUndoStack().shift()
 }
+
+function resetPractice() {
+  showCompletionModal.value = false
+  setData(mode.value === RecordType.WRONGS ? wrongs.value : pyData)
+}
 </script>
 
 <template>
-  <div class="container">
-    <div class="main" @click="next" v-longpress="showOptions">
-      {{ current }}
-    </div>
-    <div class="desc">{{ project }}剩余：{{ getUndoStack().size() }}</div>
-  </div>
-  <div class="menu-wrapper" v-if="show" @click="show = false">
-    <div class="menu" v-if="!isWrongs">.
-      <div class="menu-item" @click="prev">上一个</div>
-      <div class="menu-item" @click="addWrongs">加入错题本</div>
-      <div class="menu-item" @click="openWrongs" v-show="hasWrongs">
-        进入错题本 {{ `[${wrongs.length}个]` }}
+  <div class="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-200 flex flex-col justify-center items-center p-4">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
+      <div
+          class="main text-6xl sm:text-8xl md:text-9xl font-bold text-center py-20 cursor-pointer transition-colors duration-300 select-none"
+          @click="next"
+          v-longpress="showOptions"
+      >
+        {{ current }}
+      </div>
+      <div class="bg-indigo-600 text-white py-4 px-6 flex justify-between items-center">
+        <span class="text-lg font-semibold">{{ project }}</span>
+        <span class="text-sm">剩余：{{ getUndoStack().size() }}</span>
       </div>
     </div>
-    <div class="menu" v-else>
-      <div class="menu-item" @click="prev">上一个</div>
-      <div class="menu-item" @click="removeCurrentWrong">
-        记住了，移出：<span>{{ current }}</span>
+
+    <transition name="fade">
+      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" v-if="show" @click="show = false">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-80">
+          <h2 class="text-2xl font-bold mb-4 text-center text-indigo-600">选项菜单</h2>
+          <div v-if="!isWrongs">
+            <button @click="prev" class="w-full py-3 mb-3 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors duration-300">上一个</button>
+            <button @click="addWrongs" class="w-full py-3 mb-3 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors duration-300">加入错题本</button>
+            <button v-show="hasWrongs" @click="openWrongs" class="w-full py-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-300">
+              进入错题本 {{ `[${wrongs.length}个]` }}
+            </button>
+          </div>
+          <div v-else>
+            <button @click="prev" class="w-full py-3 mb-3 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors duration-300">上一个</button>
+            <button @click="removeCurrentWrong" class="w-full py-3 mb-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-300">
+              记住了，移出：<span class="font-bold">{{ current }}</span>
+            </button>
+            <button @click="clearAll" class="w-full py-3 mb-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-300">清空错题本</button>
+            <button @click="exitWrongs" class="w-full py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-300">退出错题本</button>
+          </div>
+        </div>
       </div>
-      <div class="menu-item" @click="clearAll" style="color: #F56C6C;">清空错题本</div>
-      <div class="menu-item" @click="exitWrongs">退出错题本</div>
-    </div>
+    </transition>
+
+    <transition name="scale">
+      <div v-if="showCompletionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-80 transform transition-all duration-300 ease-in-out" :class="{ 'scale-100 opacity-100': showCompletionModal, 'scale-95 opacity-0': !showCompletionModal }">
+          <h2 class="text-2xl font-bold mb-4 text-center text-indigo-600">恭喜你！</h2>
+          <p class="text-lg text-center mb-6">你已经完成了所有的题目！</p>
+          <div class="flex justify-center">
+            <button @click="resetPractice" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+              重新开始
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <style scoped>
-.container {
-  display: flex;
-  flex-direction: column;
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s;
 }
-
-.main {
-  font-family: 'pinyin', serif;
-  font-size: calc(20vw * 1.2);
-  text-align: center;
-  line-height: 90vh;
-  user-select: none;
-  cursor: default;
-}
-
-.desc {
-  padding-top: 12px;
-  text-align: center;
-  user-select: none;
-  cursor: default;
-  color: rgb(157, 157, 157);
-}
-
-.menu-wrapper {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 9;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.menu {
-  display: flex;
-  flex-direction: column;
-}
-
-.menu-wrapper .menu .menu-item {
-  width: 25vw;
-  min-width: 200px;
-  text-align: center;
-  background-color: #fff;
-  padding: 20px 0;
-  border-radius: 10px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.menu-wrapper .menu .menu-item + .menu-item {
-  margin-top: 25px;
+.fade-enter, .fade-leave-to {
+  opacity: 0;
 }
 </style>
